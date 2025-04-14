@@ -1,0 +1,59 @@
+# Simple Linear Pipeline
+pipeline_options:
+  runner: "DirectRunner"
+  job_name: "simple-pipeline"
+
+transforms:
+  - name: "ReadCSV"
+    type: "ReadFromText"
+    outputs: ["raw_lines"]
+    file_pattern: "tests/test_data/input.csv"
+
+  - name: "ParseCSV"
+    type: "ParDo"
+    inputs: ["raw_lines"]
+    outputs: ["parsed_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "parse_csv_line"
+    params:
+      delimiter: ","
+      fields: ["id", "name", "value"]
+
+  - name: "FilterRecords"
+    type: "Filter"
+    inputs: ["parsed_records"]
+    outputs: ["valid_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "filter_by_value"
+    params:
+      field: "value"
+      min_value: 50
+
+  - name: "ExtractKeyValue"
+    type: "Map"
+    inputs: ["valid_records"]
+    outputs: ["key_value_pairs"]
+    fn_module: "tests.test_transforms"
+    fn_name: "extract_key_value"
+    params:
+      key_field: "id"
+
+  - name: "GroupByKey"
+    type: "GroupByKey"
+    inputs: ["key_value_pairs"]
+    outputs: ["grouped_records"]
+
+  - name: "FormatResults"
+    type: "Map"
+    inputs: ["grouped_records"]
+    outputs: ["formatted_results"]
+    fn_module: "tests.test_transforms"
+    fn_name: "format_result"
+    params:
+      include_key: true
+
+  - name: "WriteResults"
+    type: "WriteToText"
+    inputs: ["formatted_results"]
+    file_path_prefix: "tests/test_data/output/simple_pipeline_results"
+    file_name_suffix: ".txt"

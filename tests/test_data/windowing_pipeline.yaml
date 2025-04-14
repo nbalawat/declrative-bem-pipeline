@@ -1,0 +1,71 @@
+# Windowing Pipeline
+pipeline_options:
+  runner: "DirectRunner"
+  job_name: "windowing-pipeline"
+  streaming: true
+
+transforms:
+  # Create a simple input with timestamps
+  - name: "ReadCSV"
+    type: "ReadFromText"
+    outputs: ["raw_lines"]
+    file_pattern: "tests/test_data/timestamped_input.csv"
+
+  - name: "ParseCSV"
+    type: "ParDo"
+    inputs: ["raw_lines"]
+    outputs: ["parsed_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "parse_csv_line"
+    params:
+      delimiter: ","
+      fields: ["id", "name", "value", "timestamp"]
+
+  # Extract timestamp from the records
+  - name: "AddTimestamps"
+    type: "WithTimestamps"
+    inputs: ["parsed_records"]
+    outputs: ["timestamped_records"]
+    fn_module: "tests.test_window_transforms"
+    fn_name: "extract_timestamp"
+
+  # Apply windowing
+  - name: "Window"
+    type: "Window"
+    inputs: ["timestamped_records"]
+    outputs: ["windowed_records"]
+    window_type: "fixed"
+    window_size: 60  # 1 minute windows
+
+  # Extract key-value pairs for grouping
+  - name: "ExtractKeyValue"
+    type: "Map"
+    inputs: ["windowed_records"]
+    outputs: ["key_value_pairs"]
+    fn_module: "tests.test_transforms"
+    fn_name: "extract_key_value"
+    params:
+      key_field: "id"
+
+  # Group by key within windows
+  - name: "GroupByWindow"
+    type: "GroupByWindow"
+    inputs: ["key_value_pairs"]
+    outputs: ["grouped_records"]
+
+  # Format results
+  - name: "FormatResults"
+    type: "Map"
+    inputs: ["grouped_records"]
+    outputs: ["formatted_results"]
+    fn_module: "tests.test_transforms"
+    fn_name: "format_result"
+    params:
+      include_key: true
+
+  # Write results
+  - name: "WriteResults"
+    type: "WriteToText"
+    inputs: ["formatted_results"]
+    file_path_prefix: "tests/test_data/output/windowing_pipeline_results"
+    file_name_suffix: ".txt"

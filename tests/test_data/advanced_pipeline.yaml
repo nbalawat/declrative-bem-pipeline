@@ -1,0 +1,127 @@
+# Advanced Pipeline with Multiple Outputs and Side Inputs
+pipeline_options:
+  runner: "DirectRunner"
+  job_name: "advanced-pipeline"
+
+transforms:
+  # Main input data
+  - name: "ReadCSV"
+    type: "ReadFromText"
+    outputs: ["raw_lines"]
+    file_pattern: "tests/test_data/input.csv"
+
+  - name: "ParseCSV"
+    type: "ParDo"
+    inputs: ["raw_lines"]
+    outputs: ["parsed_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "parse_csv_line"
+    params:
+      delimiter: ","
+      fields: ["id", "name", "value"]
+
+  # Reference data for side input
+  - name: "ReadReferenceData"
+    type: "ReadFromText"
+    outputs: ["raw_reference_data"]
+    file_pattern: "tests/test_data/reference.csv"
+
+  - name: "ParseReferenceData"
+    type: "ParDo"
+    inputs: ["raw_reference_data"]
+    outputs: ["parsed_reference_data"]
+    fn_module: "tests.test_transforms"
+    fn_name: "parse_csv_line"
+    params:
+      delimiter: ","
+      fields: ["id", "department"]
+
+  # Create a dictionary view for side input
+  - name: "ExtractReferenceKeyValue"
+    type: "Map"
+    inputs: ["parsed_reference_data"]
+    outputs: ["reference_key_value_pairs"]
+    fn_module: "tests.test_transforms"
+    fn_name: "extract_key_value"
+    params:
+      key_field: "id"
+
+  - name: "CreateReferenceDict"
+    type: "AsDict"
+    inputs: ["reference_key_value_pairs"]
+    outputs: ["reference_dict"]
+
+  # Multiple output transform to split records by value
+  - name: "SplitByValue"
+    type: "ParDoWithMultipleOutputs"
+    inputs: ["parsed_records"]
+    outputs: ["above_threshold", "below_threshold", "invalid"]
+    output_tags:
+      above_threshold: "above_threshold"
+      below_threshold: "below_threshold"
+      invalid: "invalid"
+    fn_module: "tests.test_transforms"
+    fn_name: "create_multi_output_dofn"
+    params:
+      field: "value"
+      threshold: 50
+
+  # Enrich high-value records with side input
+  - name: "EnrichHighValueRecords"
+    type: "ParDoWithSideInputs"
+    inputs: ["above_threshold"]
+    side_inputs: ["reference_dict"]
+    outputs: ["enriched_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "create_enrich_dofn"
+    params:
+      join_field: "id"
+      target_field: "department"
+
+  # Format and write the enriched records
+  - name: "FormatEnrichedRecords"
+    type: "Map"
+    inputs: ["enriched_records"]
+    outputs: ["formatted_enriched_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "format_result"
+    params:
+      include_key: false
+
+  - name: "WriteEnrichedRecords"
+    type: "WriteToText"
+    inputs: ["formatted_enriched_records"]
+    file_path_prefix: "tests/test_data/output/advanced_pipeline_enriched"
+    file_name_suffix: ".txt"
+
+  # Format and write the below threshold records
+  - name: "FormatBelowThresholdRecords"
+    type: "Map"
+    inputs: ["below_threshold"]
+    outputs: ["formatted_below_threshold_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "format_result"
+    params:
+      include_key: false
+
+  - name: "WriteBelowThresholdRecords"
+    type: "WriteToText"
+    inputs: ["formatted_below_threshold_records"]
+    file_path_prefix: "tests/test_data/output/advanced_pipeline_below_threshold"
+    file_name_suffix: ".txt"
+
+  # Format and write the invalid records
+  - name: "FormatInvalidRecords"
+    type: "Map"
+    inputs: ["invalid"]
+    outputs: ["formatted_invalid_records"]
+    fn_module: "tests.test_transforms"
+    fn_name: "format_result"
+    params:
+      include_key: false
+
+  - name: "WriteInvalidRecords"
+    type: "WriteToText"
+    inputs: ["formatted_invalid_records"]
+    file_path_prefix: "tests/test_data/output/advanced_pipeline_invalid"
+    file_name_suffix: ".txt"
