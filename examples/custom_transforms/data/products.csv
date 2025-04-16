@@ -1,0 +1,10 @@
+id,name,value,category
+1,Product A,15,electronics
+2,Product B,45,home
+3,Product C,85,electronics
+4,Product D,5,office
+5,Product E,65,home
+6,Product F,25,office
+7,Product G,95,electronics
+8,Product H,invalid,unknown
+9,Product I,0,office

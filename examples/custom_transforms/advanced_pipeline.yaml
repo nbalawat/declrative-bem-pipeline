@@ -1,0 +1,165 @@
+# Advanced Pipeline Configuration
+# Demonstrates branching, fan-out/fan-in, and side inputs
+
+name: advanced_custom_transforms_pipeline
+description: Advanced pipeline demonstrating custom transforms with branching, fan-out/fan-in, and side inputs
+
+transforms:
+  # Read input data
+  - name: ReadFromCSV
+    type: ReadFromText
+    file_pattern: examples/custom_transforms/data/products.csv
+    outputs:
+      - raw_records
+
+  # Parse CSV records into dictionaries
+  - name: ParseCSV
+    type: Map
+    fn_module: examples.custom_transforms.utils
+    fn_name: parse_csv_line
+    field_names: "id,name,value,category"
+    inputs:
+      - raw_records
+    outputs:
+      - parsed_records
+
+  # Branch 1: Multiply values by 2
+  - name: MultiplyValues
+    type: CustomMultiplyTransform
+    field: value
+    factor: 2
+    inputs:
+      - parsed_records
+    outputs:
+      - multiplied_records
+
+  # Branch 2: Extract key-value pairs for statistics
+  - name: ExtractKeyValue
+    type: Map
+    fn_module: examples.custom_transforms.utils
+    fn_name: extract_key_value
+    inputs:
+      - parsed_records
+    outputs:
+      - category_values
+      
+  # Calculate statistics on the values grouped by category
+  - name: CalculateValueStats
+    type: CombinePerKey
+    fn_module: examples.custom_transforms.utils
+    fn_name: calculate_stats
+    inputs:
+      - category_values
+    outputs:
+      - value_stats
+
+  # Write statistics to file
+  - name: WriteStats
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/value_stats
+    inputs:
+      - value_stats
+
+  # Fan-out: Categorize values into multiple outputs
+  - name: CategorizeValues
+    type: CustomCategorizeTransform
+    field: value
+    categories:
+      low:
+        min: 0
+        max: 31
+      medium:
+        min: 31
+        max: 61
+      high:
+        min: 61
+        max: 1001
+    inputs:
+      - multiplied_records
+    outputs:
+      - low_values
+      - medium_values
+      - high_values
+      - invalid_values
+
+  # Process each category separately
+  - name: ProcessLowValues
+    type: Map
+    fn_module: examples.custom_transforms.utils
+    fn_name: add_processing_info
+    inputs:
+      - low_values
+    outputs:
+      - processed_low_values
+
+  - name: ProcessMediumValues
+    type: Map
+    fn_module: examples.custom_transforms.utils
+    fn_name: add_processing_info
+    inputs:
+      - medium_values
+    outputs:
+      - processed_medium_values
+
+  - name: ProcessHighValues
+    type: Map
+    fn_module: examples.custom_transforms.utils
+    fn_name: add_processing_info
+    inputs:
+      - high_values
+    outputs:
+      - processed_high_values
+
+  # Fan-in: Merge processed values
+  - name: MergeProcessedValues
+    type: Flatten
+    inputs:
+      - processed_low_values
+      - processed_medium_values
+      - processed_high_values
+    outputs:
+      - merged_values
+
+  # Enrich with statistics as side input
+  - name: EnrichWithStats
+    type: ParDo
+    fn_module: examples.custom_transforms.utils
+    fn_name: enrich_with_stats
+    inputs:
+      - merged_values
+    side_inputs:
+      - value_stats
+    outputs:
+      - enriched_values
+
+  # Write final results
+  - name: WriteFinalResults
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/final_results
+    inputs:
+      - enriched_values
+
+  # Write individual category results
+  - name: WriteLowValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/low_values
+    inputs:
+      - processed_low_values
+
+  - name: WriteMediumValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/medium_values
+    inputs:
+      - processed_medium_values
+
+  - name: WriteHighValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/high_values
+    inputs:
+      - processed_high_values
+
+  - name: WriteInvalidValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/invalid_values
+    inputs:
+      - invalid_values

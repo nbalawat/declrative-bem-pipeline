@@ -1,0 +1,4 @@
+('unknown', {'count': 0, 'sum': 0, 'mean': 0, 'min': 0, 'max': 0})
+('electronics', {'count': 0, 'sum': 0, 'mean': 0, 'min': 0, 'max': 0})
+('home', {'count': 0, 'sum': 0, 'mean': 0, 'min': 0, 'max': 0})
+('office', {'count': 0, 'sum': 0, 'mean': 0, 'min': 0, 'max': 0})

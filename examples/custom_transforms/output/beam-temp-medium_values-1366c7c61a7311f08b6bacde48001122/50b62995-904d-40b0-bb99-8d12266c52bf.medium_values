@@ -1,1 +1,2 @@
+{'id': '1', 'name': 'Product A', 'value': '30', 'category': 'medium', 'original_value': '15', 'processed': True, 'processing_info': 'Processed Product A with value 30'}
 {'id': '6', 'name': 'Product F', 'value': '50', 'category': 'medium', 'original_value': '25', 'processed': True, 'processing_info': 'Processed Product F with value 50'}
