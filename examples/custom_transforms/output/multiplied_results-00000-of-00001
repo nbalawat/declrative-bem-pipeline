@@ -1,0 +1,8 @@
+{'id': '1', 'name': 'Product A', 'value': '30', 'category': 'Electronics', 'original_value': '15'}
+{'id': '2', 'name': 'Product B', 'value': '90', 'category': 'Clothing', 'original_value': '45'}
+{'id': '3', 'name': 'Product C', 'value': '170', 'category': 'Home', 'original_value': '85'}
+{'id': '4', 'name': 'Product D', 'value': '10', 'category': 'Food', 'original_value': '5'}
+{'id': '5', 'name': 'Product E', 'value': '130', 'category': 'Electronics', 'original_value': '65'}
+{'id': '6', 'name': 'Product F', 'value': '50', 'category': 'Clothing', 'original_value': '25'}
+{'id': '7', 'name': 'Product G', 'value': '190', 'category': 'Home', 'original_value': '95'}
+{'id': '8', 'name': 'Product H', 'value': 'invalid', 'category': 'Food'}

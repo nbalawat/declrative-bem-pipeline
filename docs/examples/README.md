@@ -13,6 +13,7 @@ This section provides complete examples of pipelines built with the Declarative 
 - [Windowing Pipeline](windowing_pipeline.md): A pipeline using windowing for time-based processing
 - [Error Handling](error_handling.md): A pipeline with robust error handling
 - [Composite Transforms](composite_transforms.md): A pipeline using composite transforms
+- [Custom Transforms](custom_transforms.md): A pipeline demonstrating custom transforms for specialized operations
 
 ## Real-World Examples
 

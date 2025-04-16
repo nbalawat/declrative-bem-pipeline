@@ -1,0 +1,9 @@
+id,name,value,category
+1,Product A,15,Electronics
+2,Product B,45,Clothing
+3,Product C,85,Home
+4,Product D,5,Food
+5,Product E,65,Electronics
+6,Product F,25,Clothing
+7,Product G,95,Home
+8,Product H,invalid,Food

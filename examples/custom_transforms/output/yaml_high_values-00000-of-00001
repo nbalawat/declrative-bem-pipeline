@@ -1,0 +1,4 @@
+{'id': '2', 'name': 'Product B', 'value': '90', 'category': 'high', 'original_value': '45'}
+{'id': '3', 'name': 'Product C', 'value': '170', 'category': 'high', 'original_value': '85'}
+{'id': '5', 'name': 'Product E', 'value': '130', 'category': 'high', 'original_value': '65'}
+{'id': '7', 'name': 'Product G', 'value': '190', 'category': 'high', 'original_value': '95'}

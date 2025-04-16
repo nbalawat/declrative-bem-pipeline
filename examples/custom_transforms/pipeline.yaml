@@ -1,0 +1,80 @@
+name: Complete Custom Transforms Pipeline
+description: Demonstrates both CustomMultiplyTransform and CustomCategorizeTransform
+
+transforms:
+  # Read from CSV file
+  - name: ReadFromCSV
+    type: ReadFromText
+    file_pattern: examples/custom_transforms/sample_data.csv
+    outputs:
+      - csv_lines
+
+  # Parse CSV lines
+  - name: ParseCSV
+    type: Map
+    fn_module: examples.custom_transforms.utils
+    fn_name: parse_csv_line
+    inputs:
+      - csv_lines
+    outputs:
+      - parsed_records
+
+  # Apply CustomMultiplyTransform
+  - name: MultiplyValues
+    type: CustomMultiplyTransform
+    field: value
+    factor: 2
+    inputs:
+      - parsed_records
+    outputs:
+      - multiplied_records
+
+  # Apply CustomCategorizeTransform
+  - name: CategorizeValues
+    type: CustomCategorizeTransform
+    field: value
+    categories:
+      low:
+        min: 0
+        max: 30
+      medium:
+        min: 30
+        max: 70
+      high:
+        min: 70
+        max: 200
+    inputs:
+      - multiplied_records
+    outputs:
+      - low_values
+      - medium_values
+      - high_values
+      - invalid_values
+
+  # Write low values to a file
+  - name: WriteLowValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/yaml_low_values
+    inputs:
+      - low_values
+
+  # Write medium values to a file
+  - name: WriteMediumValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/yaml_medium_values
+    inputs:
+      - medium_values
+
+  # Write high values to a file
+  - name: WriteHighValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/yaml_high_values
+    inputs:
+      - high_values
+
+  # Write invalid values to a file
+  - name: WriteInvalidValues
+    type: WriteToText
+    file_path_prefix: examples/custom_transforms/output/yaml_invalid_values
+    inputs:
+      - invalid_values

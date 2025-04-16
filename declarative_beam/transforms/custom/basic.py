@@ -95,10 +95,16 @@ class CustomCategorizeTransform(BaseTransform):
         if not field or not categories:
             raise ValueError(f"Transform '{self.name}' requires 'field' and 'categories'")
         
+        # Get the output names from the transform configuration
+        output_names = self.get_output_names()
+        
+        # Create a mapping from category names to output names
+        output_tag_mapping = self.get_output_tag_mapping()
+        
         class CategorizeDoFn(beam.DoFn):
             def process(self, element, field=field, categories=categories):
                 if not isinstance(element, dict) or field not in element:
-                    yield beam.pvalue.TaggedOutput('invalid', element)
+                    yield beam.pvalue.TaggedOutput('invalid_values', element)
                     return
                 
                 try:
@@ -109,15 +115,13 @@ class CustomCategorizeTransform(BaseTransform):
                         
                         if min_val <= value < max_val:
                             element['category'] = category
-                            yield beam.pvalue.TaggedOutput(category, element)
+                            yield beam.pvalue.TaggedOutput(f'{category}_values', element)
                             return
                     
                     # If no category matches
-                    yield beam.pvalue.TaggedOutput('other', element)
+                    yield beam.pvalue.TaggedOutput('other_values', element)
                 except (ValueError, TypeError):
-                    yield beam.pvalue.TaggedOutput('invalid', element)
+                    yield beam.pvalue.TaggedOutput('invalid_values', element)
         
-        return beam.ParDo(
-            CategorizeDoFn(),
-            *[category for category in categories.keys()] + ['other', 'invalid']
-        )
+        # Create a ParDo transform with multiple outputs
+        return beam.ParDo(CategorizeDoFn()).with_outputs(*output_names)
