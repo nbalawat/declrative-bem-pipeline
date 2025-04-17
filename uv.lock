@@ -792,6 +792,7 @@ source = { editable = "." }
 dependencies = [
     { name = "apache-beam", version = "2.60.0", source = { registry = "https://pypi.org/simple" }, extra = ["gcp"], marker = "python_full_version < '3.9'" },
     { name = "apache-beam", version = "2.64.0", source = { registry = "https://pypi.org/simple" }, extra = ["gcp"], marker = "python_full_version >= '3.9'" },
+    { name = "google-cloud-bigtable" },
     { name = "importlib-metadata", version = "8.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "importlib-metadata", version = "8.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "pytest" },
@@ -825,6 +826,7 @@ visualization = [
 requires-dist = [
     { name = "apache-beam", extras = ["gcp"], specifier = ">=2.40.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
+    { name = "google-cloud-bigtable", specifier = ">=2.18.0" },
     { name = "graphviz", marker = "extra == 'visualization'", specifier = ">=0.20.0" },
     { name = "importlib-metadata", specifier = ">=4.0.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.0.0" },

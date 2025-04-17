@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  bigtable-emulator:
+    build:
+      context: .
+      dockerfile: bigtable-emulator.Dockerfile
+    ports:
+      - "8086:8086"
+    environment:
+      - BIGTABLE_EMULATOR_HOST=0.0.0.0:8086
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8086"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

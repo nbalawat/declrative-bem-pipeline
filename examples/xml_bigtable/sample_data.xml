@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions>
+    <transaction id="ACH12345" type="ACH">
+        <amount>5000.00</amount>
+        <currency>USD</currency>
+        <status>completed</status>
+        <timestamp>2025-04-15T14:30:00Z</timestamp>
+        <sender>
+            <account_number>123456789</account_number>
+            <routing_number>021000021</routing_number>
+            <account_name>John Smith</account_name>
+            <bank_name>Chase Bank</bank_name>
+        </sender>
+        <receiver>
+            <account_number>987654321</account_number>
+            <routing_number>026009593</routing_number>
+            <account_name>Jane Doe</account_name>
+            <bank_name>Bank of America</bank_name>
+        </receiver>
+        <metadata>
+            <purpose>Invoice payment</purpose>
+            <invoice_number>INV-2025-04-123</invoice_number>
+            <memo>April services</memo>
+        </metadata>
+    </transaction>
+    <transaction id="WIRE98765" type="Wire">
+        <amount>25000.00</amount>
+        <currency>USD</currency>
+        <status>completed</status>
+        <timestamp>2025-04-15T10:15:00Z</timestamp>
+        <sender>
+            <account_number>5678901234</account_number>
+            <routing_number>121000248</routing_number>
+            <account_name>Acme Corporation</account_name>
+            <bank_name>Wells Fargo</bank_name>
+            <swift_code>WFBIUS6S</swift_code>
+        </sender>
+        <receiver>
+            <account_number>8901234567</account_number>
+            <routing_number>026009593</routing_number>
+            <account_name>Global Enterprises</account_name>
+            <bank_name>Bank of America</bank_name>
+            <swift_code>BOFAUS3N</swift_code>
+        </receiver>
+        <metadata>
+            <purpose>Contract payment</purpose>
+            <reference_number>REF-2025-04-456</reference_number>
+            <memo>Project Alpha milestone payment</memo>
+        </metadata>
+    </transaction>
+    <transaction id="CHK54321" type="Check">
+        <amount>750.00</amount>
+        <currency>USD</currency>
+        <status>pending</status>
+        <timestamp>2025-04-15T16:45:00Z</timestamp>
+        <sender>
+            <account_number>2345678901</account_number>
+            <routing_number>322271627</routing_number>
+            <account_name>Sarah Johnson</account_name>
+            <bank_name>Citibank</bank_name>
+        </sender>
+        <receiver>
+            <account_number>3456789012</account_number>
+            <routing_number>021000021</routing_number>
+            <account_name>Robert Williams</account_name>
+            <bank_name>Chase Bank</bank_name>
+        </receiver>
+        <metadata>
+            <purpose>Rent payment</purpose>
+            <check_number>1234</check_number>
+            <memo>May rent</memo>
+        </metadata>
+    </transaction>
+</transactions>
