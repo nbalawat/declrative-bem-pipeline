@@ -1,0 +1,14 @@
+# Minimal pipeline YAML to test runner selection
+runner:
+  type: DirectRunner
+  options: {}
+
+transforms:
+  - name: ReadFromText
+    type: ReadFromText
+    file_pattern: tests/test_data/input.txt
+    outputs: [ReadFromText]
+  - name: WriteToText
+    type: WriteToText
+    file_path_prefix: tests/test_data/output/runner_selection_results
+    inputs: [ReadFromText]

@@ -1,8 +1,7 @@
 # Windowing Pipeline
-pipeline_options:
-  runner: "DirectRunner"
-  job_name: "windowing-pipeline"
-  streaming: true
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   # Create a simple input with timestamps

@@ -262,12 +262,18 @@ class PipelineBuilder:
         # Validate dependencies
         self._validate_dependencies()
 
-        # Create pipeline options
-        pipeline_options_dict = self.config.get("pipeline_options", {})
+        # --- Runner selection logic ---
+        runner_config = self.config.get("runner", {})
+        runner_type = runner_config.get("type", "DirectRunner")
+        runner_options = runner_config.get("options", {})
+
+        # Merge runner_options and pipeline_options (runner_options take precedence)
+        pipeline_options_dict = dict(self.config.get("pipeline_options", {}))
+        pipeline_options_dict.update(runner_options)
         pipeline_options = PipelineOptions.from_dictionary(pipeline_options_dict)
 
-        # Create the pipeline
-        pipeline = beam.Pipeline(options=pipeline_options)
+        # Create the pipeline with the specified runner
+        pipeline = beam.Pipeline(runner=runner_type, options=pipeline_options)
 
         # Build the pipeline graph
         self._build_pipeline_graph(pipeline)

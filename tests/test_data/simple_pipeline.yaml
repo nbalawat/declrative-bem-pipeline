@@ -1,7 +1,7 @@
 # Simple Linear Pipeline
-pipeline_options:
-  runner: "DirectRunner"
-  job_name: "simple-pipeline"
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   - name: "ReadCSV"

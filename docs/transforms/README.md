@@ -1,5 +1,7 @@
 # Transform Reference
 
+> **Note:** All YAML pipeline files must now include a top-level `runner` section and place transform parameters at the top level. See the reference docs for details.
+
 This section provides detailed documentation for all the transforms available in the Declarative Beam Pipeline framework.
 
 ## Transform Categories

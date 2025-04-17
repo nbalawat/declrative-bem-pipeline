@@ -1,20 +1,19 @@
 
-name: Custom Transform Test Pipeline
-description: Tests custom transforms
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   - name: ReadCSV
     type: ReadFromText
-    config:
-      file_pattern: tests/test_data/custom_transform_input.csv
+    file_pattern: tests/test_data/custom_transform_input.csv
     outputs:
       - raw_lines
 
   - name: ParseCSV
     type: Map
-    config:
-      fn_module: csv_utils
-      fn_name: parse_csv_line
+    fn_module: csv_utils
+    fn_name: parse_csv_line
     inputs:
       - raw_lines
     outputs:
@@ -22,9 +21,8 @@ transforms:
 
   - name: MultiplyValues
     type: CustomMultiplyTransform
-    config:
-      field: value
-      factor: 5
+    field: value
+    factor: 5
     inputs:
       - parsed_records
     outputs:
@@ -32,7 +30,6 @@ transforms:
 
   - name: WriteResults
     type: WriteToText
-    config:
-      file_path_prefix: tests/test_data/output/custom_transform_results
+    file_path_prefix: tests/test_data/output/custom_transform_results
     inputs:
       - multiplied_records

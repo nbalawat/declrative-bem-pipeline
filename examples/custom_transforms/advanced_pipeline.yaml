@@ -1,8 +1,9 @@
 # Advanced Pipeline Configuration
 # Demonstrates branching, fan-out/fan-in, and side inputs
 
-name: advanced_custom_transforms_pipeline
-description: Advanced pipeline demonstrating custom transforms with branching, fan-out/fan-in, and side inputs
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   # Read input data

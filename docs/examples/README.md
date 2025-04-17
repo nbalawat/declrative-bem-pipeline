@@ -2,6 +2,22 @@
 
 This section provides complete examples of pipelines built with the Declarative Beam Pipeline framework.
 
+## YAML Pipeline Schema (Updated)
+
+All example YAMLs must include a top-level `runner` section and place transform parameters at the top level. Example:
+
+```yaml
+runner:
+  type: DirectRunner
+  options: {}
+
+transforms:
+  - name: ReadCSV
+    type: ReadFromText
+    file_pattern: examples/data/input.csv
+    outputs: [csv_lines]
+```
+
 ## Basic Examples
 
 - [Simple Pipeline](simple_pipeline.md): A basic pipeline that reads, processes, and writes data

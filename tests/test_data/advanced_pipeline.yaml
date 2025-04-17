@@ -1,7 +1,7 @@
 # Advanced Pipeline with Multiple Outputs and Side Inputs
-pipeline_options:
-  runner: "DirectRunner"
-  job_name: "advanced-pipeline"
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   # Main input data

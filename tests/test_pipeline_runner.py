@@ -290,6 +290,19 @@ def test_windowing_pipeline():
     print(f"Windowing pipeline test passed with {len(output_lines)} output lines")
     print(f"Runtime: {pipeline_result['runtime_seconds']:.2f} seconds")
 
+def test_runner_selection():
+    """Test that the pipeline builder selects the correct runner from YAML config."""
+    output_dir = "tests/test_data/output"
+    setup_output_dir(output_dir)
+
+    pipeline_result = run_pipeline("tests/test_data/runner_selection_pipeline.yaml")
+    output_lines = read_output_files("tests/test_data/output/runner_selection_results")
+
+    # The DirectRunner should run successfully and produce output
+    assert len(output_lines) > 0, "No output was produced by DirectRunner"
+    print(f"Runner selection test passed with {len(output_lines)} output lines")
+    print(f"Runtime: {pipeline_result['runtime_seconds']:.2f} seconds")
+
 
 if __name__ == "__main__":
     # Create the output directory

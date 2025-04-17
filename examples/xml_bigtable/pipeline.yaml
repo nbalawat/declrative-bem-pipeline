@@ -1,11 +1,18 @@
 name: XML to BigTable Pipeline
 description: A pipeline that reads payment transaction XML data, transforms it, and writes to BigTable
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   # Read from XML file
   - name: ReadFromXml
     type: ReadFromXml
-    file_pattern: /Users/nbalawat/development/declarative-beam-pipeline/examples/xml_bigtable/sample_data.xml
+    parameters:
+      file_pattern: /Users/nbalawat/development/declarative-beam-pipeline/examples/xml_bigtable/sample_data.xml
+      record_element_tag: transaction
+      include_attributes: true
+      attribute_prefix: "@"
     record_element_tag: transaction
     include_attributes: true
     attribute_prefix: "@"

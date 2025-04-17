@@ -4,32 +4,32 @@ This document provides a comprehensive reference for the YAML configuration form
 
 ## Configuration Structure
 
-A pipeline configuration YAML file has the following structure:
+A pipeline configuration YAML file must include a top-level `runner` section and use top-level parameters for all transforms. Example:
 
 ```yaml
-name: Pipeline Name
+runner:
+  type: DirectRunner
+  options: {}
+
 description: Pipeline Description
 
 transforms:
   - name: TransformName1
     type: TransformType1
-    config:
-      # Transform-specific configuration
+    param1: value1
+    param2: value2
     inputs:
       - input_pcollection_name
     outputs:
       - output_pcollection_name
-    side_inputs:
-      side_input_name: side_input_pcollection_name
 
   - name: TransformName2
     type: TransformType2
-    config:
-      # Transform-specific configuration
+    paramA: valueA
+    paramB: valueB
     inputs:
-      - input_pcollection_name
+      - output_pcollection_name
     outputs:
-      - output_pcollection_name1
       - output_pcollection_name2
 ```
 
@@ -37,6 +37,7 @@ transforms:
 
 | Property | Type | Description | Required |
 |----------|------|-------------|----------|
+| `runner` | Object | Beam runner configuration | Yes |
 | `name` | String | Name of the pipeline | Yes |
 | `description` | String | Description of the pipeline | No |
 | `transforms` | Array | List of transforms in the pipeline | Yes |

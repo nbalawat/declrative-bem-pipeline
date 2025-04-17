@@ -1,5 +1,6 @@
-name: Complete Custom Transforms Pipeline
-description: Demonstrates both CustomMultiplyTransform and CustomCategorizeTransform
+runner:
+  type: DirectRunner
+  options: {}
 
 transforms:
   # Read from CSV file
