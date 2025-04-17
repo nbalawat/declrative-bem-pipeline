@@ -5,7 +5,7 @@ transforms:
   # Read from XML file
   - name: ReadFromXml
     type: ReadFromXml
-    file_pattern: sample_data.xml
+    file_pattern: /Users/nbalawat/development/declarative-beam-pipeline/examples/xml_bigtable/sample_data.xml
     record_element_tag: transaction
     include_attributes: true
     attribute_prefix: "@"
@@ -42,7 +42,7 @@ transforms:
 
   # Write to BigTable
   - name: WriteToBigTable
-    type: WriteToBigTableSimulator
+    type: WriteToBigTable
     project_id: test-project
     instance_id: test-instance
     table_id: transactions

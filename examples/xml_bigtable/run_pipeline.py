@@ -213,9 +213,16 @@ def restore_pipeline_yaml():
         return False
 
 
-def run_pipeline():
+def run_pipeline(use_emulator_flag=False):
     """
     Run the XML to BigTable pipeline.
+    
+    This function sets up and runs the pipeline that reads XML data,
+    transforms it, and writes it to BigTable.
+    
+    Args:
+        use_emulator_flag: If True, try to use the BigTable emulator instead of the simulator.
+                          Default is False, which uses the in-memory simulator.
     """
     try:
         # Use absolute path for output directory
@@ -229,15 +236,83 @@ def run_pipeline():
         # Clear any previous data in the BigTable simulator
         BigTableSimulator.clear_all()
         
-        # For this example, we'll always use the simulator
-        # The emulator has issues with column families
-        use_simulator = True
-        use_emulator = False
-        logger.info("Using in-memory BigTable simulator for this example.")
+        # Determine whether to use the emulator or simulator
+        emulator_available = check_bigtable_emulator()
         
-        # The pipeline YAML is already configured to use the simulator
-        logger.info("Using in-memory BigTable simulator for the pipeline.")
-        yaml_modified = False  # No need to modify the YAML anymore
+        # By default, use the simulator unless explicitly requested to try the emulator
+        if use_emulator_flag and emulator_available:
+            logger.info("Attempting to use BigTable emulator as requested...")
+            use_emulator = True
+            use_simulator = False
+            
+            # Try to set up the emulator
+            emulator_setup_success = setup_bigtable_emulator()
+            if not emulator_setup_success:
+                logger.warning("Failed to set up BigTable emulator. Falling back to in-memory simulator.")
+                use_simulator = True
+                use_emulator = False
+        else:
+            # Default to using the simulator
+            use_simulator = True
+            use_emulator = False
+            if not use_emulator_flag:
+                logger.info("Using in-memory BigTable simulator by default.")
+            elif not emulator_available:
+                logger.info("BigTable emulator not available. Using in-memory simulator.")
+            else:
+                logger.info("Using in-memory BigTable simulator as it's more reliable for testing.")
+        
+        # Make sure we're using the correct transform in the YAML
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        yaml_path = os.path.join(current_dir, 'pipeline.yaml')
+        yaml_modified = False
+        
+        # Read the current YAML content
+        with open(yaml_path, 'r') as f:
+            yaml_content = f.read()
+            
+        if use_simulator:
+            logger.info("Using in-memory BigTable simulator for the pipeline.")
+            # Check if we need to update the YAML to use the simulator
+            if 'type: WriteToBigTable' in yaml_content and 'type: WriteToBigTableSimulator' not in yaml_content:
+                # Save a backup before modifying
+                backup_path = f"{yaml_path}.bak"
+                if not os.path.exists(backup_path):
+                    shutil.copy2(yaml_path, backup_path)
+                
+                # Update the YAML to use the simulator
+                modified_yaml = yaml_content.replace(
+                    "type: WriteToBigTable",
+                    "type: WriteToBigTableSimulator"
+                )
+                
+                # Write the modified YAML back
+                with open(yaml_path, 'w') as f:
+                    f.write(modified_yaml)
+                
+                yaml_modified = True
+                logger.info("Updated pipeline YAML to use BigTableSimulator")
+        else:
+            logger.info("Using BigTable emulator for the pipeline.")
+            # Check if we need to update the YAML to use the emulator
+            if 'type: WriteToBigTableSimulator' in yaml_content:
+                # Save a backup before modifying
+                backup_path = f"{yaml_path}.bak"
+                if not os.path.exists(backup_path):
+                    shutil.copy2(yaml_path, backup_path)
+                
+                # Update the YAML to use the emulator
+                modified_yaml = yaml_content.replace(
+                    "type: WriteToBigTableSimulator",
+                    "type: WriteToBigTable"
+                )
+                
+                # Write the modified YAML back
+                with open(yaml_path, 'w') as f:
+                    f.write(modified_yaml)
+                
+                yaml_modified = True
+                logger.info("Updated pipeline YAML to use BigTable emulator")
         
         # Set up the pipeline options
         options = PipelineOptions()
@@ -259,11 +334,80 @@ def run_pipeline():
         logger.info("Running the pipeline...")
         result = pipeline.run()
         
-        # Wait for the pipeline to finish
-        logger.info("Waiting for the pipeline to finish...")
-        result.wait_until_finish()
-        
-        logger.info("Pipeline execution completed successfully!")
+        # Wait for the pipeline to finish with a timeout
+        # Use a shorter timeout when using the emulator to avoid long waits
+        timeout_seconds = 15 if use_emulator else 60
+        logger.info(f"Waiting for the pipeline to finish (timeout: {timeout_seconds} seconds)...")
+        try:
+            # Set a timeout to prevent hanging
+            import threading
+            finish_event = threading.Event()
+            
+            def wait_for_pipeline():
+                try:
+                    result.wait_until_finish()
+                    finish_event.set()
+                except Exception as e:
+                    logger.error(f"Error waiting for pipeline: {str(e)}")
+            
+            # Start a thread to wait for the pipeline
+            wait_thread = threading.Thread(target=wait_for_pipeline)
+            wait_thread.daemon = True
+            wait_thread.start()
+            
+            # Wait with timeout
+            if finish_event.wait(timeout=timeout_seconds):
+                logger.info("Pipeline execution completed successfully!")
+            else:
+                logger.warning(f"Pipeline execution timed out after {timeout_seconds} seconds.")
+                logger.warning("The pipeline may still be running in the background.")
+                
+                # If using emulator, provide additional diagnostic information and fall back to simulator
+                if use_emulator:
+                    logger.warning("BigTable emulator write operations are timing out.")
+                    logger.warning("This is a known issue with the BigTable emulator.")
+                    
+                    # Force fallback to simulator for this run
+                    logger.info("Falling back to in-memory simulator due to timeout...")
+                    use_simulator = True
+                    use_emulator = False
+                    
+                    # Clear any existing pipeline
+                    if 'result' in locals():
+                        try:
+                            result.cancel()
+                            logger.info("Cancelled the previous pipeline run")
+                        except Exception as e:
+                            logger.warning(f"Could not cancel previous pipeline: {str(e)}")
+                    
+                    # Update the YAML to use the simulator
+                    yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pipeline.yaml')
+                    with open(yaml_path, 'r') as f:
+                        yaml_content = f.read()
+                    
+                    if 'type: WriteToBigTable' in yaml_content and 'type: WriteToBigTableSimulator' not in yaml_content:
+                        # Save a backup
+                        backup_path = f"{yaml_path}.bak"
+                        if not os.path.exists(backup_path):
+                            shutil.copy2(yaml_path, backup_path)
+                        
+                        # Update to use simulator
+                        modified_yaml = yaml_content.replace(
+                            "type: WriteToBigTable",
+                            "type: WriteToBigTableSimulator"
+                        )
+                        
+                        with open(yaml_path, 'w') as f:
+                            f.write(modified_yaml)
+                        
+                        logger.info("Updated pipeline YAML to use BigTableSimulator due to timeout")
+                        yaml_modified = True
+                        
+                        # Restart the pipeline with the simulator
+                        logger.info("Restarting pipeline with BigTable simulator...")
+                        return run_pipeline()
+        except Exception as e:
+            logger.error(f"Error waiting for pipeline: {str(e)}")
         
         # Print the contents of the BigTable
         print_bigtable_contents('test-project', 'test-instance', 'transactions', use_simulator=use_simulator)
@@ -282,4 +426,16 @@ def run_pipeline():
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Run the XML to BigTable pipeline")
+    parser.add_argument(
+        "--use-emulator", 
+        action="store_true", 
+        help="Try to use the BigTable emulator instead of the in-memory simulator"
+    )
+    args = parser.parse_args()
+    
+    # Run the pipeline with the specified options
+    run_pipeline(use_emulator_flag=args.use_emulator)
