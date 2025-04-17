@@ -311,38 +311,105 @@ class _BigTableWriteDoFn(beam.DoFn):
         if not self.batch:
             return
 
-        retry_count = 0
-        while retry_count <= self.max_retries:
-            try:
-                status = self.table.mutate_rows(self.batch)
-                for i, status_entry in enumerate(status):
-                    if not status_entry.code:
-                        beam.metrics.Metrics.counter("BigTableWrite", "rows_written").inc()
+        # Process in smaller sub-batches to improve reliability with the emulator
+        sub_batch_size = min(50, len(self.batch))  # Use smaller batches for emulator
+        success_count = 0
+        failure_count = 0
+        
+        # Split the batch into smaller sub-batches
+        for sub_batch_start in range(0, len(self.batch), sub_batch_size):
+            sub_batch_end = min(sub_batch_start + sub_batch_size, len(self.batch))
+            current_sub_batch = self.batch[sub_batch_start:sub_batch_end]
+            
+            # Process this sub-batch with retries
+            retry_count = 0
+            sub_batch_success = False
+            
+            while retry_count <= self.max_retries and not sub_batch_success:
+                try:
+                    # Use a timeout for the write operation to prevent hanging
+                    write_success = self._write_with_timeout(current_sub_batch)
+                    
+                    if write_success:
+                        success_count += len(current_sub_batch)
+                        sub_batch_success = True
+                        beam.metrics.Metrics.counter("BigTableWrite", "rows_written").inc(len(current_sub_batch))
                     else:
+                        # Timeout occurred
+                        retry_count += 1
+                        logger.warning(f"Timeout writing to BigTable, retrying {retry_count}/{self.max_retries}")
+                except (DeadlineExceeded, ServiceUnavailable) as e:
+                    retry_count += 1
+                    if retry_count <= self.max_retries:
                         logger.warning(
-                            f"Failed to write row {i} in batch: {status_entry.code} - {status_entry.message}"
+                            f"Transient error writing to BigTable, retrying {retry_count}/{self.max_retries}: {e}"
                         )
-                        beam.metrics.Metrics.counter("BigTableWrite", "rows_failed").inc()
-                break
-            except (DeadlineExceeded, ServiceUnavailable) as e:
-                retry_count += 1
-                if retry_count <= self.max_retries:
-                    logger.warning(
-                        f"Transient error writing to BigTable, retrying {retry_count}/{self.max_retries}: {e}"
-                    )
-                else:
-                    logger.error(f"Failed to write to BigTable after {self.max_retries} retries: {e}")
+                    else:
+                        logger.error(f"Failed to write sub-batch to BigTable after {self.max_retries} retries: {e}")
+                        failure_count += len(current_sub_batch)
+                        if not self.skip_invalid_records:
+                            raise
+                except Exception as e:
+                    logger.error(f"Error writing sub-batch to BigTable: {e}")
+                    failure_count += len(current_sub_batch)
                     if not self.skip_invalid_records:
                         raise
-            except Exception as e:
-                logger.error(f"Error writing to BigTable: {e}")
-                if not self.skip_invalid_records:
-                    raise
-                break
-
+                    break
+        
+        # Log the results
+        if success_count > 0:
+            logger.info(f"Successfully wrote {success_count} rows to BigTable")
+        if failure_count > 0:
+            logger.warning(f"Failed to write {failure_count} rows to BigTable")
+        
         # Reset the batch
         self.batch = []
         self.batch_count = 0
+        
+        # Return success if at least some rows were written
+        return success_count > 0
+
+    def _write_with_timeout(self, rows, timeout=10):
+        """Write rows to BigTable with a timeout to prevent hanging.
+        
+        Args:
+            rows: List of rows to write
+            timeout: Timeout in seconds
+            
+        Returns:
+            bool: True if the write was successful, False if it timed out
+        """
+        import threading
+        import time
+        
+        # Flag to track success
+        success = [False]
+        
+        def _write():
+            try:
+                status = self.table.mutate_rows(rows)
+                # Check if all rows were written successfully
+                all_success = all(not entry.code for entry in status)
+                success[0] = all_success
+            except Exception as e:
+                logger.error(f"Error in _write_with_timeout thread: {e}")
+                success[0] = False
+        
+        # Create and start the thread
+        write_thread = threading.Thread(target=_write)
+        write_thread.daemon = True
+        write_thread.start()
+        
+        # Wait for the thread with a timeout
+        start_time = time.time()
+        while write_thread.is_alive() and time.time() - start_time < timeout:
+            time.sleep(0.1)
+        
+        if write_thread.is_alive():
+            logger.warning(f"BigTable write operation timed out after {timeout} seconds")
+            return False
+        
+        return success[0]
 
 
 # BigTable Simulator for local testing
