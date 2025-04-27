@@ -1,0 +1,84 @@
+# Payment Processing Pipeline with Aggregation
+# Demonstrates a simplified pipeline focusing on aggregation
+
+runner:
+  type: DirectRunner
+  options: {}
+
+transforms:
+  # Read input payment data
+  - name: ReadPaymentData
+    type: ReadFromText
+    file_pattern: examples/payment_processing/data/payments.csv
+    outputs:
+      - raw_payments
+
+  # Parse CSV records into payment dictionaries
+  - name: ParsePayments
+    type: Map
+    fn_module: examples.payment_processing.utils
+    fn_name: parse_csv_line_wrapper
+    params:
+      field_names: "transaction_id,user_id,amount,currency,timestamp,payment_method,ip_address,card_number"
+    inputs:
+      - raw_payments
+    outputs:
+      - parsed_payments
+
+  # Convert all payments to USD for reporting
+  - name: ConvertPayments
+    type: CurrencyConversionTransform
+    amount_field: amount
+    source_currency_field: currency
+    target_currency: USD
+    base_currency: USD
+    exchange_rates:
+      EUR: 1.1
+      GBP: 1.3
+      JPY: 0.0091
+      CAD: 0.75
+      AUD: 0.68
+    inputs:
+      - parsed_payments
+    outputs:
+      - converted_payments
+
+  # Add date components for aggregation
+  - name: EnrichPayments
+    type: PaymentEnrichmentTransform
+    timestamp_field: timestamp
+    timezone: UTC
+    inputs:
+      - converted_payments
+    outputs:
+      - enriched_payments
+
+  # Aggregate payments by user for reporting
+  - name: AggregateByUser
+    type: PaymentAggregationTransform
+    group_by_fields:
+      - user_id
+      - payment_method
+    amount_field: converted_amount
+    count_field: transaction_count
+    sum_field: total_amount_usd
+    avg_field: avg_amount_usd
+    min_field: min_amount_usd
+    max_field: max_amount_usd
+    inputs:
+      - enriched_payments
+    outputs:
+      - user_payment_stats
+
+  # Write results to output files
+  - name: WriteUserStats
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/user_payment_stats
+    inputs:
+      - user_payment_stats
+
+  - name: WriteConvertedPayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/converted_payments
+    inputs:
+      - enriched_payments

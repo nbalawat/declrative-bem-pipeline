@@ -1,0 +1,71 @@
+# Simple Payment Processing Pipeline Configuration
+# Demonstrates basic payment validation and processing
+
+runner:
+  type: DirectRunner
+  options: {}
+
+transforms:
+  # Read input payment data
+  - name: ReadPaymentData
+    type: ReadFromText
+    file_pattern: examples/payment_processing/data/payments.csv
+    outputs:
+      - raw_payments
+
+  # Parse CSV records into payment dictionaries
+  - name: ParsePayments
+    type: Map
+    fn_module: examples.payment_processing.utils
+    fn_name: parse_csv_line_wrapper
+    params:
+      field_names: "transaction_id,user_id,amount,currency,timestamp,payment_method,ip_address,card_number"
+    inputs:
+      - raw_payments
+    outputs:
+      - parsed_payments
+
+  # Validate payments and route them accordingly
+  - name: ValidatePayments
+    type: PaymentValidationTransform
+    required_fields:
+      - transaction_id
+      - user_id
+      - amount
+      - currency
+      - timestamp
+    amount_field: amount
+    min_amount: 0.01
+    max_amount: 10000.00
+    inputs:
+      - parsed_payments
+    outputs:
+      - small_payments
+      - medium_payments
+      - large_payments
+      - invalid_payments
+
+  # Write results to output files
+  - name: WriteSmallPayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/small_payments
+    inputs:
+      - small_payments
+
+  - name: WriteMediumPayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/medium_payments
+    inputs:
+      - medium_payments
+
+  - name: WriteLargePayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/large_payments
+    inputs:
+      - large_payments
+
+  - name: WriteInvalidPayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/invalid_payments
+    inputs:
+      - invalid_payments

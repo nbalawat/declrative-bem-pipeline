@@ -1,0 +1,1 @@
+{'transaction_id': 'transaction_id', 'user_id': 'user_id', 'amount': 'amount', 'currency': 'currency', 'timestamp': 'timestamp', 'payment_method': 'payment_method', 'ip_address': 'ip_address', 'card_number': 'card_number', 'validation_error': 'Invalid amount format: amount'}

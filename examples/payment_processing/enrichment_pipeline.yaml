@@ -1,0 +1,106 @@
+# Payment Processing Pipeline with Enrichment
+# Demonstrates payment validation and enrichment
+
+runner:
+  type: DirectRunner
+  options: {}
+
+transforms:
+  # Read input payment data
+  - name: ReadPaymentData
+    type: ReadFromText
+    file_pattern: examples/payment_processing/data/payments.csv
+    outputs:
+      - raw_payments
+
+  # Parse CSV records into payment dictionaries
+  - name: ParsePayments
+    type: Map
+    fn_module: examples.payment_processing.utils
+    fn_name: parse_csv_line_wrapper
+    params:
+      field_names: "transaction_id,user_id,amount,currency,timestamp,payment_method,ip_address,card_number"
+    inputs:
+      - raw_payments
+    outputs:
+      - parsed_payments
+
+  # Validate payments and route them accordingly
+  - name: ValidatePayments
+    type: PaymentValidationTransform
+    required_fields:
+      - transaction_id
+      - user_id
+      - amount
+      - currency
+      - timestamp
+    amount_field: amount
+    min_amount: 0.01
+    max_amount: 10000.00
+    inputs:
+      - parsed_payments
+    outputs:
+      - small_payments
+      - medium_payments
+      - large_payments
+      - invalid_payments
+
+  # Enrich valid payments with additional information
+  - name: EnrichSmallPayments
+    type: PaymentEnrichmentTransform
+    timestamp_field: timestamp
+    timezone: UTC
+    add_fields:
+      processing_type: small_payment
+      priority: low
+    inputs:
+      - small_payments
+    outputs:
+      - enriched_small_payments
+
+  - name: EnrichMediumPayments
+    type: PaymentEnrichmentTransform
+    timestamp_field: timestamp
+    timezone: UTC
+    add_fields:
+      processing_type: medium_payment
+      priority: medium
+    inputs:
+      - medium_payments
+    outputs:
+      - enriched_medium_payments
+
+  - name: EnrichLargePayments
+    type: PaymentEnrichmentTransform
+    timestamp_field: timestamp
+    timezone: UTC
+    add_fields:
+      processing_type: large_payment
+      priority: high
+    inputs:
+      - large_payments
+    outputs:
+      - enriched_large_payments
+
+  # Merge all enriched payments
+  - name: MergeEnrichedPayments
+    type: Flatten
+    inputs:
+      - enriched_small_payments
+      - enriched_medium_payments
+      - enriched_large_payments
+    outputs:
+      - all_enriched_payments
+
+  # Write results to output files
+  - name: WriteEnrichedPayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/enriched_payments
+    inputs:
+      - all_enriched_payments
+
+  - name: WriteInvalidPayments
+    type: WriteToText
+    file_path_prefix: examples/payment_processing/output/invalid_payments
+    inputs:
+      - invalid_payments
